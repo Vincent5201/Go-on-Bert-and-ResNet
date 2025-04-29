@@ -58,13 +58,12 @@ def next_move(data_type, model, device, board=None, seq=None):
             pred = model(xp, xw, mask, t)[0]
 
     pred = torch.nn.functional.softmax(pred, dim=-1).cpu().numpy()
-    top_indices = np.argsort(pred)[-10:]
-    return top_indices, pred
+    return pred
 
 def vote_next_move(data_types, models, device, board=None, seq=None):
     probs = np.zeros([BOARD_SIZE * BOARD_SIZE])
     for i, model in enumerate(models):
-        _, pred = next_move(data_types[i], model, device, board, seq)
+        pred = next_move(data_types[i], model, device, board, seq)
         probs += pred
     return np.argsort(-probs), probs
 
@@ -72,7 +71,7 @@ def get_next_move(game, data_types, models, num_moves, device):
     board, seq = gen_one_board(game, num_moves)
     poses, probs = vote_next_move(data_types, models, device, board, seq)
 
-    return poses, np.argsort(probs)[-1]
+    return poses, probs
 
 if __name__ == "__main__":
     data_types = ["Combine"]

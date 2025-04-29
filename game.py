@@ -4,7 +4,7 @@ import time
 import copy
 import random
 
-from appilication import *
+from application import *
 from gen_board import *
 
 pygame.init()
