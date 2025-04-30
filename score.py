@@ -1,6 +1,6 @@
 from mydatasets import get_datasets
 from models import load_models
-from appilication import prediction
+from application import prediction
 from sklearn.metrics import f1_score, accuracy_score
 from tools import myaccn
 from torch.utils.data import DataLoader

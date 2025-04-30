@@ -38,7 +38,7 @@ class BERTDataset(Dataset):
 
         self.x = torch.tensor(seqs, dtype=torch.long)
         self.y = torch.tensor(labels, dtype=torch.long)
-        self.mask = (self.x != 0).detach().long()
+        self.mask = (self.x != 361).detach().long()
         self.token_types = torch.tensor(token_types, dtype=torch.long)
         self.n_samples = self.y.shape[0]
         gc.collect()
@@ -63,7 +63,7 @@ class CombineDataset(Dataset):
         self.seqs = torch.tensor(seqs, dtype=torch.long)
         self.boards = torch.tensor(boards)
         self.y = torch.tensor(labels, dtype=torch.long)
-        self.mask = (self.x != 0).detach().long()
+        self.mask = (self.x != 361).detach().long()
         self.token_types = torch.tensor(token_types, dtype=torch.long)
         self.n_samples = self.y.shape[0]
         gc.collect()

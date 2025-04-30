@@ -37,7 +37,7 @@ def next_move(data_type, model, device, board=None, seq=None):
     if data_type == "Word":
         token_types = gen_token_type(seq, board)
         x = torch.tensor(seq, dtype=torch.long).to(device)
-        mask = (x != 0).detach().long().to(device)
+        mask = (x != 361).detach().long().to(device)
         t = torch.tensor(token_types, dtype=torch.long).to(device)
         
         with torch.no_grad():
@@ -51,7 +51,7 @@ def next_move(data_type, model, device, board=None, seq=None):
     elif data_type == 'Combine':
         token_types = gen_token_type(seq, board)
         xw = torch.tensor(seq, dtype=torch.long).to(device)
-        mask = (xw != 0).detach().long().to(device)
+        mask = (xw != 361).detach().long().to(device)
         t = torch.tensor(token_types, dtype=torch.long).to(device)
         xp = torch.tensor(board, dtype=torch.float32).to(device)
         with torch.no_grad():
