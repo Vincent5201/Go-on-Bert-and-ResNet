@@ -50,7 +50,7 @@ def channel_01(board, x, y, turn):
     return
 
 def channel_2(board, turn):
-    #next turn (all 1/0)
+    # next turn black -> fill 1 -> turn is even
     if turn % 2 == 0:
         board[2].fill(1)
     return
