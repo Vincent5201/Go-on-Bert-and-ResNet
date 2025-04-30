@@ -74,7 +74,6 @@ def value_board(board):
                 t0, t1 = count_neighbor(board2, i, j)
                 p0 += t0
                 p1 += t1
-
     return p1 > p0 + 5
 
 def get_UCB(node: "MCTSnode"):
@@ -88,10 +87,10 @@ class MCTSnode():
     def __init__(self, game=None, parent: "MCTSnode" = None):
         self.w = 0
         self.n = 0
-        self.parent = parent
         self.children = []
         self.game = game if game is not None else []
-        self.nch = 10
+        self.parent = parent
+        self.nch = 5
     
     def expand(self, data_types, models, num_moves, device):
         if len(self.children) > 0:
@@ -119,7 +118,7 @@ class MCTSnode():
             return
     
         move_count = len(self.game)
-        board, seq = gen_one_board(game, num_moves)
+        board, seq = gen_one_board(self.game, num_moves)
         while move_count < num_moves:
             move_count += 1
             poses, _ = vote_next_move(data_types, models, device, board, seq)
@@ -130,8 +129,9 @@ class MCTSnode():
             channel_2(board, move_count + 1)
             channel_3(board, x, y, move_count)
             seq[move_count-1] = pose
-        
+       
         bwin = value_board(board)
+
         if bwin:
             return 1
         return 0
@@ -164,34 +164,38 @@ def MCTS(data_types, models, device, game, num_moves, iters):
         next(root)
     pbar.close()
 
-    print(root.w)
-    print(root.n)
-
-    
-
-
-
+    bwinrate = root.children[0].w / root.children[0].n
+    idx = 0
+    for i in range(1, root.nch):
+        r = root.children[i].w / root.children[i].n
+        if len(game) % 2:
+            if r < bwinrate:
+                bwinrate = r
+                idx = i
+        else:
+            if r > bwinrate:
+                bwinrate = r
+                idx = i
+    return root.children[idx].game[-1]
 
 
 if __name__ == "__main__":
-    data_types = ["Word", "Picture"]
+    data_types = ["Picture"]
     model_config = {}
     model_config["hidden_size"] = HIDDEN_SIZE
     model_config["bert_layers"] = BERT_LAYERS
     model_config["res_channel"] = RES_CHANNELS
     model_config["res_layers"] = RES_LAYERS
     paths = []
-    paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt")
+    #paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt")
     paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//ResNet//mid_s65_30000.pt")
     #paths = ["D://codes//python//.vscode//Go_on_Bert_Resnet//models//Combine//B20000_R20000.pt"]
     device = "cpu"
     models = load_models(paths, data_types, model_config, device)
     
-    game = ['dq','dd','pp','pc','qe','co','od','oc','nd','nc','md','lc','mc','mb','cp','do','ld',
-              'kc','kd','jc','jd','ic','bo','bn','bp','cm','qc','pd','qd','pe','pf','qf','qg',
-              'rf','rg','of','pg','oe','id','hd','he','ge','gd','hc','fd','hf','ie','gf','pb',
-              'ob','ee','cf','de','ce','eg','gh','cd','cc','bd','bc','dc','be','ed','ad','qb',
-              'jg','dd']
+    game = ['dq','dd','pp','pc']
     game = [transfer(step) for step in game]
     print("start MCTS")
-    MCTS(data_types, models, device, game, 100, 100)
+    pose = MCTS(data_types, models, device, game, 100, 20)
+    
+    print(transfer_back(pose))
