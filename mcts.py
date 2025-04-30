@@ -1,6 +1,6 @@
 from tools import *
-from gen_board import gen_one_board
-from application import vote_next_move
+from gen_board import *
+from application import *
 
 # 對每個節點，設定好10種下一步，然後都用模型的一選跑到240步，再用 value func. 去判斷這場誰贏
 # 一氣的算死棋刪掉，但要檢查一氣的對方鄰居是不是也一氣
@@ -75,27 +75,123 @@ def value_board(board):
                 p0 += t0
                 p1 += t1
 
-    return p1 > p0 + 5, p1, p0
+    return p1 > p0 + 5
+
+def get_UCB(node: "MCTSnode"):
+    if node.n == 0:
+        return 9223372036854775807
+    if node.parent is None:
+        return node.w / node.n + sqrt(2 * np.log(node.n) / node.n)
+    return node.w / node.n + sqrt(2 * np.log(node.parent.n) / node.n)
+
+class MCTSnode():
+    def __init__(self, game=None, parent: "MCTSnode" = None):
+        self.w = 0
+        self.n = 0
+        self.parent = parent
+        self.children = []
+        self.game = game if game is not None else []
+        self.nch = 10
+    
+    def expand(self, data_types, models, num_moves, device):
+        if len(self.children) > 0:
+            print("expand error")
+            return
+        poses, _ = get_next_move(self.game, data_types, models, num_moves, device)
+        for i in range(self.nch):
+            self.children.append(MCTSnode(self.game + [poses[i]], self))
+    
+    def select_child(self):
+        if len(self.children) == 0:
+            return None
+        maxucb = get_UCB(self.children[0])
+        maxidx = 0
+        for i in range(1, self.nch):
+            ucb = get_UCB(self.children[i])
+            if ucb > maxucb:
+                maxucb = ucb
+                maxidx = i
+        return self.children[maxidx]
+    
+    def rollout(self, data_types, models, num_moves, device):
+        if self.n > 0:
+            print("rollout error")
+            return
+    
+        move_count = len(self.game)
+        board, seq = gen_one_board(game, num_moves)
+        while move_count < num_moves:
+            move_count += 1
+            poses, _ = vote_next_move(data_types, models, device, board, seq)
+            pose = poses[0]
+            x = pose // BOARD_SIZE
+            y = pose % BOARD_SIZE
+            channel_01(board, x, y, move_count)
+            channel_2(board, move_count + 1)
+            channel_3(board, x, y, move_count)
+            seq[move_count-1] = pose
+        
+        bwin = value_board(board)
+        if bwin:
+            return 1
+        return 0
+        
+
+
+def MCTS(data_types, models, device, game, num_moves, iters):
+    root = MCTSnode(game)
+    iter = 0
+    root.expand(data_types, models, num_moves, device)
+    pbar = tqdm(total=iters)
+    def next(node: "MCTSnode"):
+        nonlocal iter
+        if len(node.children) == 0:
+            if node.n == 0:
+                bwin = node.rollout(data_types, models, num_moves, device)
+                iter += 1
+                pbar.update(1)
+            else:
+                node.expand(data_types, models, num_moves, device)
+                bwin = next(node.select_child())
+        else:
+            bwin = next(node.select_child())
+
+        node.n += 1
+        node.w += bwin
+        return bwin
+
+    while iter < iters:
+        next(root)
+    pbar.close()
+
+    print(root.w)
+    print(root.n)
+
+    
 
 
 
 
 
 if __name__ == "__main__":
+    data_types = ["Word", "Picture"]
+    model_config = {}
+    model_config["hidden_size"] = HIDDEN_SIZE
+    model_config["bert_layers"] = BERT_LAYERS
+    model_config["res_channel"] = RES_CHANNELS
+    model_config["res_layers"] = RES_LAYERS
+    paths = []
+    paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt")
+    paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//ResNet//mid_s65_30000.pt")
+    #paths = ["D://codes//python//.vscode//Go_on_Bert_Resnet//models//Combine//B20000_R20000.pt"]
+    device = "cpu"
+    models = load_models(paths, data_types, model_config, device)
+    
     game = ['dq','dd','pp','pc','qe','co','od','oc','nd','nc','md','lc','mc','mb','cp','do','ld',
               'kc','kd','jc','jd','ic','bo','bn','bp','cm','qc','pd','qd','pe','pf','qf','qg',
               'rf','rg','of','pg','oe','id','hd','he','ge','gd','hc','fd','hf','ie','gf','pb',
               'ob','ee','cf','de','ce','eg','gh','cd','cc','bd','bc','dc','be','ed','ad','qb',
-              'jg','dd','dh','eh','di','ei','lg','dj','cj','ck','dk','ej','bk','ci','cl','dg',
-              'ch','cg','bh','bg','bi','qq','cb','db','da','ab','ac','af','ae','ea','ca','fb',
-              'gb','gc','hb','og','ng','nf','mf','ne','gj','nh','mg','lb','na','df','bb','aa',
-              'eq','ep','fq','fp','gp','gq','gr','hq','dr','dp','hr','iq','ir','jq','cr','la',
-              'ka','go','jr','kq','kr','lr','lq','mr','lp','mh','nq','nr','oq','or','io','hp',
-              'ko','pa','oa','lh','kh','ki','ji','kj','jj','mq','mp','kk','oo','kf','kg','if',
-              'ig','qm','pm','ql']
+              'jg','dd']
     game = [transfer(step) for step in game]
-    board, _ = gen_one_board(game, 240)
-    win, b, w = value_board(board)
-    print(win)
-    print(b)
-    print(w)
+    print("start MCTS")
+    MCTS(data_types, models, device, game, 100, 100)
