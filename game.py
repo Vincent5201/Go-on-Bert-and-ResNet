@@ -6,6 +6,7 @@ import random
 
 from application import *
 from gen_board import *
+from mcts import MCTS
 
 pygame.init()
 
@@ -41,7 +42,7 @@ board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
 seq = np.full([NUM_MOVES], fill_value=361, dtype=np.int64)
 board_history = []
 text = ""
-games = []
+game = []
 last_move = [-1, -1]
 mode = "standby"
 button_cool = True
@@ -49,6 +50,7 @@ cool_time = 0
 turn = 1
 playing = False
 computer_turn = 0
+mcts = True
 
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("圍棋")
@@ -101,27 +103,27 @@ def draw_button(text, x, y, width, height, action):
 def reset_game():
     global button_cool
     if button_cool:
-        global mode, turn, board, text, games, board_history, cool_time, playing
+        global mode, turn, board, text, game, board_history, cool_time, playing
         button_cool = False
         cool_time = time.time()
         mode = "standby"
         turn = 1
         board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
         text = ""
-        games = []
+        game = []
         board_history = []
         playing = False
 
 def back():
     global button_cool
     if button_cool:
-        global games, turn, board, board_history, cool_time
+        global game, turn, board, board_history, cool_time
         button_cool = False
         cool_time = time.time()
         board = board_history[-2]
         board_history = board_history[:-1]
         turn = 0 if turn else 1
-        games = games[:-1]
+        game = game[:-1]
         
 def start():
     global button_cool
@@ -129,8 +131,8 @@ def start():
         global cool_time
         button_cool = False
         cool_time = time.time()
-        global text, computer_turn, turn, board, text, games, board_history, playing, mode
-        if len(games):
+        global text, computer_turn, turn, board, text, game, board_history, playing, mode
+        if len(game):
             text = "reset first"
             return
         mode = "playing"
@@ -159,23 +161,26 @@ while running:
         button_cool = True
 
     if playing and computer_turn == turn:
-        poses, probs = vote_next_move(data_types, models, device, board, seq)
+        if len(game) > 120:
+            pose = MCTS(data_types, models, device, board, seq, len(game), max(150, len(game) + 20), 100)
+        else:
+            poses, _ = vote_next_move(data_types, models, device, board, seq)
         tgt = 0
-        while poses[tgt] == last_move[turn] or \
-                            board[0][poses[tgt] // BOARD_SIZE][poses[tgt] % BOARD_SIZE] or \
-                            board[1][poses[tgt] // BOARD_SIZE][poses[tgt] % BOARD_SIZE]:
+        x, y = split_move(poses[tgt])
+        while poses[tgt] == last_move[turn] or board[0][x][y] or board[1][x][y]:
             tgt += 1
+            x, y = split_move(poses[tgt])
+            
         result = poses[tgt]
         last_move[turn] = result
-        x = result // BOARD_SIZE
-        y = result % BOARD_SIZE
+        
         channel_01(board, x, y, turn)
         channel_2(board, turn + 1)
         channel_3(board, x, y, turn)
         
         move = transfer_back(result)
         text = move
-        games.append(move)
+        game.append(result)
         board_history.append(copy.deepcopy(board))
         turn = 0 if turn else 1
         
@@ -193,7 +198,7 @@ while running:
                 channel_3(board, grid_x, grid_y, turn)
                 move = transfer_back(grid_x * 19 + grid_y)
                 text = move
-                games.append(move)
+                game.append(grid_x * 19 + grid_y)
                 board_history.append(copy.deepcopy(board))
                 turn = 0 if turn else 1
                 

@@ -28,6 +28,9 @@ def transfer(step):
        return 361
     return (ord(step[0])-97) * 19 + (ord(step[1])-97) 
 
+def split_move(move):
+    return move // BOARD_SIZE, move % BOARD_SIZE
+
 def valid_pos(dx, dy):
     return dx >= 0 and dx < BOARD_SIZE and dy >= 0 and dy < BOARD_SIZE
 

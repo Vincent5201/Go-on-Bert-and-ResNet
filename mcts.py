@@ -2,27 +2,23 @@ from tools import *
 from gen_board import *
 from application import *
 
-# 對每個節點，設定好10種下一步，然後都用模型的一選跑到240步，再用 value func. 去判斷這場誰贏
-# 一氣的算死棋刪掉，但要檢查一氣的對方鄰居是不是也一氣
-# 對於無人的空地，看接觸誰的數量多，就算誰的地
-
 def value_board(board):
     def neighbor_liberty(board, p, x, y):
         pp = 0 if p else 1
+        stack = [(x, y)]
         counted = set()
-        def next(x, y):
-            counted.add((x, y))
-            liberty = 361
-            direcs = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
-            for dx, dy in direcs:
-                if valid_pos(dx, dy) and not ((dx, dy) in counted):
+        liberty = 361
+
+        while stack:
+            cx, cy = stack.pop()
+            counted.add((cx, cy))
+            for dx, dy in [(cx+1, cy), (cx-1, cy), (cx, cy+1), (cx, cy-1)]:
+                if valid_pos(dx, dy) and (dx, dy) not in counted:
                     if board[p][dx][dy]:
-                        next(dx, dy)
+                        stack.append((dx, dy))
                     elif board[pp][dx][dy]:
                         liberty = min(liberty, board[3][dx][dy])
-
-            return liberty
-        return next(x, y)
+        return liberty
     
     def del_die(board, x, y, p):
         board[p][x][y] = 0
@@ -43,13 +39,12 @@ def value_board(board):
             p1 = 0
             direcs = [(x + 1, y), (x, y - 1), (x - 1, y), (x, y + 1)]
             for dx, dy in direcs:
-                if valid_pos(dx, dy) and board[0][dx][dy] != -1 and not ((dx, dy) in counted):
+                if valid_pos(dx, dy) and not ((dx, dy) in counted):
                     if board[0][dx][dy] == 1:
                         p0 += 1
                     elif board[1][dx][dy] == 1:
                         p1 += 1
                     else:
-                        board[0][dx][dy] = -1
                         t0, t1 = next(dx, dy, dist-1)
                         p0 += t0
                         p1 += t1
@@ -58,8 +53,7 @@ def value_board(board):
         return next(x, y, 10)
 
 
-    board2 = np.zeros_like(board)
-    np.copyto(board2, board)
+    board2 = np.array(board, copy=True)
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
             if board2[3][i][j] == 1:
@@ -76,39 +70,50 @@ def value_board(board):
                 p1 += t1
     return p1 > p0 + 5
 
-def get_UCB(node: "MCTSnode"):
+def get_UCB(node: "MCTSnode", offset):
     if node.n == 0:
         return 9223372036854775807
     if node.parent is None:
         return node.w / node.n + sqrt(2 * np.log(node.n) / node.n)
-    return node.w / node.n + sqrt(2 * np.log(node.parent.n) / node.n)
+    return node.w / node.n + sqrt(2 * np.log(node.parent.n + offset) / node.n)
 
 class MCTSnode():
-    def __init__(self, game=None, parent: "MCTSnode" = None):
+    def __init__(self, board, seq, length, parent: "MCTSnode" = None):
         self.w = 0
         self.n = 0
         self.children = []
-        self.game = game if game is not None else []
+        self.expands = []
+        self.board = board
+        self.seq = seq
+        self.length = length
         self.parent = parent
         self.nch = 5
+        self.ucb = 9223372036854775807
     
-    def expand(self, data_types, models, num_moves, device):
+    def expand(self, data_types, models, device):
         if len(self.children) > 0:
             print("expand error")
             return
-        poses, _ = get_next_move(self.game, data_types, models, num_moves, device)
+        poses, _ = vote_next_move(data_types, models, device, self.board, self.seq)
         for i in range(self.nch):
-            self.children.append(MCTSnode(self.game + [poses[i]], self))
+            board2 = np.array(self.board, copy=True)
+            seq2 = np.array(self.seq, copy=True)
+            seq2[self.length] = poses[i]
+            self.expands.append(poses[i])
+            x, y = split_move(poses[i])
+            channel_01(board2, x, y, self.length + 1)
+            channel_2(board2, self.length)
+            channel_3(board2, x, y, self.length + 1)
+            self.children.append(MCTSnode(board2, seq2, self.length + 1, self))
     
     def select_child(self):
         if len(self.children) == 0:
             return None
-        maxucb = get_UCB(self.children[0])
+        maxucb = self.children[0].ucb
         maxidx = 0
         for i in range(1, self.nch):
-            ucb = get_UCB(self.children[i])
-            if ucb > maxucb:
-                maxucb = ucb
+            if self.children[i].ucb > maxucb:
+                maxucb = self.children[i].ucb
                 maxidx = i
         return self.children[maxidx]
     
@@ -116,32 +121,32 @@ class MCTSnode():
         if self.n > 0:
             print("rollout error")
             return
-    
-        move_count = len(self.game)
-        board, seq = gen_one_board(self.game, num_moves)
+
+        board2 = np.array(self.board, copy=True)
+        seq2 = np.array(self.seq, copy=True)
+        move_count = self.length
         while move_count < num_moves:
             move_count += 1
-            poses, _ = vote_next_move(data_types, models, device, board, seq)
+            poses, _ = vote_next_move(data_types, models, device, board2, seq2)
             pose = poses[0]
-            x = pose // BOARD_SIZE
-            y = pose % BOARD_SIZE
-            channel_01(board, x, y, move_count)
-            channel_2(board, move_count + 1)
-            channel_3(board, x, y, move_count)
-            seq[move_count-1] = pose
+            x, y = split_move(pose)
+            
+            channel_01(board2, x, y, move_count)
+            channel_2(board2, move_count + 1)
+            channel_3(board2, x, y, move_count)
+            seq2[move_count-1] = pose
        
-        bwin = value_board(board)
+        bwin = value_board(board2)
 
         if bwin:
             return 1
         return 0
-        
+    
 
-
-def MCTS(data_types, models, device, game, num_moves, iters):
-    root = MCTSnode(game)
+def MCTS(data_types, models, device, board, seq, length, num_moves, iters):
+    root = MCTSnode(board, seq, length)
     iter = 0
-    root.expand(data_types, models, num_moves, device)
+    root.expand(data_types, models, device)
     pbar = tqdm(total=iters)
     def next(node: "MCTSnode"):
         nonlocal iter
@@ -151,13 +156,14 @@ def MCTS(data_types, models, device, game, num_moves, iters):
                 iter += 1
                 pbar.update(1)
             else:
-                node.expand(data_types, models, num_moves, device)
+                node.expand(data_types, models, device)
                 bwin = next(node.select_child())
         else:
             bwin = next(node.select_child())
 
         node.n += 1
         node.w += bwin
+        node.ucb = get_UCB(node, 1)
         return bwin
 
     while iter < iters:
@@ -176,7 +182,8 @@ def MCTS(data_types, models, device, game, num_moves, iters):
             if r > bwinrate:
                 bwinrate = r
                 idx = i
-    return root.children[idx].game[-1]
+            
+    return root.expands[idx]
 
 
 if __name__ == "__main__":
@@ -193,9 +200,20 @@ if __name__ == "__main__":
     device = "cpu"
     models = load_models(paths, data_types, model_config, device)
     
-    game = ['dq','dd','pp','pc']
+    game = ['dq','dd','pp','pc','qe','co','od','oc','nd','nc','md','lc','mc','mb','cp','do','ld',
+              'kc','kd','jc','jd','ic','bo','bn','bp','cm','qc','pd','qd','pe','pf','qf','qg',
+              'rf','rg','of','pg','oe','id','hd','he','ge','gd','hc','fd','hf','ie','gf','pb',
+              'ob','ee','cf','de','ce','eg','gh','cd','cc','bd','bc','dc','be','ed','ad','qb',
+              'jg','dd','dh','eh','di','ei','lg','dj','cj','ck','dk','ej','bk','ci','cl','dg',
+              'ch','cg','bh','bg','bi','qq','cb','db','da','ab','ac','af','ae','ea','ca','fb',
+              'gb','gc','hb','og','ng','nf','mf','ne','gj','nh','mg','lb','na','df','bb','aa',
+              'eq','ep','fq','fp','gp','gq','gr','hq','dr','dp','hr','iq','ir','jq','cr','la',
+              'ka','go','jr','kq','kr','lr','lq','mr','lp','mh','nq','nr','oq','or','io','hp',
+              'ko','pa','oa','lh','kh','ki','ji','kj','jj','mq','mp','kk','oo','kf','kg','if',
+              'ig','qm','pm']
     game = [transfer(step) for step in game]
+    board, seq = gen_one_board(game, NUM_MOVES)
     print("start MCTS")
-    pose = MCTS(data_types, models, device, game, 100, 20)
+    pose = MCTS(data_types, models, device, board, seq, len(game), max(151, len(game) + 20), 20)
     
     print(transfer_back(pose))

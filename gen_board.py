@@ -113,8 +113,7 @@ def gen_all_boards(games, num_moves):
                 boards[game_count][2].fill(1)
             else:
                 last_move = labels[game_count-1]
-                x = last_move // BOARD_SIZE
-                y = last_move % BOARD_SIZE
+                x, y = split_move(last_move)
                 np.copyto(boards[game_count], boards[game_count - 1])
                 np.copyto(seqs[game_count], seqs[game_count - 1])
                 seqs[game_count][j] = last_move
@@ -131,8 +130,7 @@ def gen_one_board(game, num_moves):
     if len(game) % 2:
         board[2].fill(1)
     for j, move in enumerate(game):
-        x = move // BOARD_SIZE
-        y = move % BOARD_SIZE
+        x, y = split_move(move)
         seq[j] = move
         channel_01(board, x, y, j + 1)
         channel_3(board, x, y, j + 1)
