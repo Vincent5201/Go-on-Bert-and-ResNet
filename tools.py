@@ -47,22 +47,3 @@ def myaccn(pred_logits, true, n):
 def transfer_back(step):
     return chr((step//19)+97)+chr((step%19)+97) 
 
-
-
-# accuracy in every length of games
-def myaccn_split(pred, true, n, split, num_move):
-    correct = [0]*split
-    for i, p in tqdm(enumerate(pred), total=len(pred), leave=False):
-        sorted_indices = (-p).argsort()
-        top_k_indices = sorted_indices[:n]  
-        if true[i] in top_k_indices:
-            correct[int((i%num_move)/int(num_move/split))] += 1
-    part_total = len(true)/split
-    for i in range(split):
-        correct[i] /= part_total
-    return correct 
-
-def distance(m1, m2):
-    if m1 == m2:
-        return 0
-    return sqrt(pow(m2//19-m1//19,2)+ pow(m2%19-m1%19,2))

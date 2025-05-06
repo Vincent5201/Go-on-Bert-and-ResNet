@@ -9,7 +9,7 @@ class ResNetDataset(Dataset):
     # data loading
     def __init__(self, boards, labels):
         
-        self.x = torch.tensor(boards)
+        self.x = torch.tensor(boards, dtype=torch.float32)
         self.y = torch.tensor(labels, dtype=torch.long)
         self.n_samples = boards.shape[0]
         gc.collect()
@@ -61,7 +61,7 @@ class CombineDataset(Dataset):
                 token_types[i][j] = boards[i][3][move // BOARD_SIZE][move % BOARD_SIZE]
 
         self.seqs = torch.tensor(seqs, dtype=torch.long)
-        self.boards = torch.tensor(boards)
+        self.boards = torch.tensor(boards, dtype=torch.float32)
         self.y = torch.tensor(labels, dtype=torch.long)
         self.mask = (self.x != 361).detach().long()
         self.token_types = torch.tensor(token_types, dtype=torch.long)

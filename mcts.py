@@ -1,7 +1,9 @@
 from tools import *
 from gen_board import *
 from application import *
+from cpptools import value_board
 
+"""
 def value_board(board):
     def neighbor_liberty(board, p, x, y):
         pp = 0 if p else 1
@@ -69,6 +71,7 @@ def value_board(board):
                 p0 += t0
                 p1 += t1
     return p1 > p0 + 5
+"""
 
 def get_UCB(node: "MCTSnode", offset):
     if node.n == 0:
@@ -174,7 +177,7 @@ def MCTS(data_types, models, device, board, seq, length, num_moves, iters):
     idx = 0
     for i in range(1, root.nch):
         r = root.children[i].w / root.children[i].n
-        if len(game) % 2:
+        if length % 2:
             if r < bwinrate:
                 bwinrate = r
                 idx = i

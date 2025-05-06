@@ -1,6 +1,7 @@
 from tools import *
 from config import *
-
+from cpptools import channel_01, channel_3
+"""
 def channel_01(board, x, y, turn):
     #plain1 is black
     #plain0 is white
@@ -48,13 +49,13 @@ def channel_01(board, x, y, turn):
             elif turn % 2 == 0 and board[1][dx][dy] and checkDie(dx, dy, 1):
                 del_die(dx, dy, 1)
     return
-
+"""
 def channel_2(board, turn):
     # next turn black -> fill 1 -> turn is even
     if turn % 2 == 0:
         board[2].fill(1)
     return
-
+"""
 def channel_3(board, x, y, turn):
     counted_empty = set()
     counted_pos = set()
@@ -98,10 +99,10 @@ def channel_3(board, x, y, turn):
         if valid_pos(dx, dy) and board[pp][dx][dy] and not ((dx, dy) in counted_pos):
             set_liberty(dx, dy, pp, check_liberty(dx, dy, pp))
     return
-
+"""
 def gen_all_boards(games, num_moves):
     total_moves = len(games) * num_moves
-    boards = np.zeros([total_moves, CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
+    boards = np.zeros([total_moves, CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.int32)
     seqs = np.full([total_moves, num_moves], fill_value=361, dtype=np.int64)
     labels = np.zeros(total_moves)
 
@@ -125,7 +126,7 @@ def gen_all_boards(games, num_moves):
     return boards, seqs, labels
 
 def gen_one_board(game, num_moves):
-    board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
+    board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.int32)
     seq = np.full([num_moves], fill_value=361, dtype=np.int64)
     if len(game) % 2:
         board[2].fill(1)
@@ -136,3 +137,9 @@ def gen_one_board(game, num_moves):
         channel_3(board, x, y, j + 1)
 
     return board, seq
+
+if __name__ == "__main__":
+    arr = np.zeros([4,19,19], dtype=np.int32)
+    channel_01(arr,1,1,1)
+    print(arr[0])
+    print(arr[1])

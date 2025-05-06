@@ -38,7 +38,7 @@ BUTTON_COOLDOWN = 0.5
 RADIUS = 10
 
 running = True
-board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
+board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.int32)
 seq = np.full([NUM_MOVES], fill_value=361, dtype=np.int64)
 board_history = []
 text = ""
@@ -108,7 +108,7 @@ def reset_game():
         cool_time = time.time()
         mode = "standby"
         turn = 1
-        board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.float32)
+        board = np.zeros([CHANNEL_SIZE, BOARD_SIZE, BOARD_SIZE],  dtype=np.int32)
         text = ""
         game = []
         board_history = []
@@ -144,9 +144,10 @@ def quit_game():
     pygame.quit()
     sys.exit()
 
-data_types = ["Picture", "Word"]
-paths = ["D://codes//python//.vscode//Go_on_Bert_Resnet//models//ResNet//mid_s65_30000.pt",
-         "D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt"]
+data_types = ["Picture"]
+paths = []
+paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//ResNet//mid_s65_30000.pt")
+#paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt")
 device = "cpu"
 model_config = {}
 model_config["hidden_size"] = HIDDEN_SIZE
@@ -161,8 +162,8 @@ while running:
         button_cool = True
 
     if playing and computer_turn == turn:
-        if len(game) > 120:
-            pose = MCTS(data_types, models, device, board, seq, len(game), max(150, len(game) + 20), 100)
+        if len(game) > 10:
+            pose = MCTS(data_types, models, device, board, seq, len(game), min(len(game)+50 ,max(150, len(game) + 20)), 100)
         else:
             poses, _ = vote_next_move(data_types, models, device, board, seq)
         tgt = 0
