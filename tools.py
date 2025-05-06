@@ -1,6 +1,5 @@
 import numpy as np
 from tqdm import tqdm
-from math import sqrt, pow
 from config import *
 
 FIRST_STEPS = ["dd", "cd", "dc", "dp", "dq", "cp", "pd", "qd", 

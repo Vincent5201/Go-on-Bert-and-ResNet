@@ -2,6 +2,7 @@ from tools import *
 from gen_board import *
 from application import *
 from cpptools import value_board
+from math import sqrt
 
 """
 def value_board(board):
