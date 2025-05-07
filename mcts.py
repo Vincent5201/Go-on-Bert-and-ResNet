@@ -151,7 +151,7 @@ def MCTS(data_types, models, device, board, seq, length, num_moves, iters):
     root = MCTSnode(board, seq, length)
     iter = 0
     root.expand(data_types, models, device)
-    pbar = tqdm(total=iters)
+    pbar = tqdm(total=iters, leave=False)
     def next(node: "MCTSnode"):
         nonlocal iter
         if len(node.children) == 0:

@@ -64,7 +64,7 @@ for epoch in range(num_epochs):
             pred = model(x, m, t)
         elif data_config["data_type"] == "Combine":
             xp, xw, m, t, y = (d.to(device) for d in datas)
-            pred = model(xw, m, t, xp)
+            pred = model(xp, xw, m, t)
         elif data_config["data_type"] == "Picture":
             x, y = (d.to(device) for d in datas)
             pred = model(x)

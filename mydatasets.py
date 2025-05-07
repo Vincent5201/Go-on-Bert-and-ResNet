@@ -63,7 +63,7 @@ class CombineDataset(Dataset):
         self.seqs = torch.tensor(seqs, dtype=torch.long)
         self.boards = torch.tensor(boards, dtype=torch.float32)
         self.y = torch.tensor(labels, dtype=torch.long)
-        self.mask = (self.x != 361).detach().long()
+        self.mask = (self.seqs != 361).detach().long()
         self.token_types = torch.tensor(token_types, dtype=torch.long)
         self.n_samples = self.y.shape[0]
         gc.collect()
@@ -82,9 +82,12 @@ def get_datasets(data_config, split_rate=0.1, train=True):
     games = [game for game in df if check(game, data_config["data_source"], data_config["num_moves"])]
     print(f'valid_rate:{len(games)/len(df)}')
     print(f'has {len(games)} games')
-    
+
     # transfer to 0~360, and pad 361
-    games = [[transfer(step) for step in game[:data_config["num_moves"]]] for game in games]
+    if data_config["data_source"] == 'foxwq':
+        games = [[transfer(step) for step in game[1:data_config["num_moves"]]] for game in games]
+    else:
+        games = [[transfer(step) for step in game[:data_config["num_moves"]]] for game in games]
     print("transfer finish")
 
     boards, seqs, labels = gen_all_boards(games, data_config["num_moves"])

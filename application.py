@@ -16,7 +16,7 @@ def prediction(data_type, model, device, test_loader):
                 pred = model(x, m, t)
             elif data_type == "Combine":
                 xp, xw, m, t, _ = (d.to(device) for d in datas)
-                pred = model(xw, m, t, xp)
+                pred = model(xp, xw, m, t)
             elif data_type == "Picture":
                 x, _ = (d.to(device) for d in datas)
                 pred = model(x)

@@ -13,10 +13,11 @@ def check(game, data_source, num_moves):
         game = game[1:]
     if len(game) < num_moves:
         return False
-    
     for i, step in enumerate(game):
         if i == 0 and not (step in FIRST_STEPS):
             return False
+        if isinstance(step, float):
+            break
         if(len(step) != 2 or step[0]<'a' or step[0]>'s' or step[1]<'a' or step[1]>'s'):
             return False
         
@@ -28,7 +29,7 @@ def transfer(step):
     return (ord(step[0])-97) * 19 + (ord(step[1])-97) 
 
 def split_move(move):
-    return move // BOARD_SIZE, move % BOARD_SIZE
+    return int(move // BOARD_SIZE), int(move % BOARD_SIZE)
 
 def valid_pos(dx, dy):
     return dx >= 0 and dx < BOARD_SIZE and dy >= 0 and dy < BOARD_SIZE
