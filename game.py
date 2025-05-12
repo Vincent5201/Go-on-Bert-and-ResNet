@@ -144,10 +144,11 @@ def quit_game():
     pygame.quit()
     sys.exit()
 
-data_types = ["Picture"]
+data_types = ["Combine"]
 paths = []
-paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//ResNet//mid_s65_30000.pt")
-#paths.append("D://codes//python//.vscode//Go_on_Bert_Resnet//models//BERT//mid_s27_30000.pt")
+#paths.append("models//ResNet//mid_s65_30000.pt")
+#paths.append("models//BERT//mid_s27_30000.pt")
+paths.append("models//Combine//B20000_R20000.pt")
 device = "cpu"
 model_config = {}
 model_config["hidden_size"] = HIDDEN_SIZE
@@ -155,6 +156,7 @@ model_config["bert_layers"] = BERT_LAYERS
 model_config["res_channel"] = RES_CHANNELS
 model_config["res_layers"] = RES_LAYERS
 models = load_models(paths, data_types, model_config, device)
+use_mcts = True
 
 while running:
     screen.fill(BACKGROUND_COLOR)
@@ -162,7 +164,7 @@ while running:
         button_cool = True
 
     if playing and computer_turn == turn:
-        if len(game) > 10:
+        if use_mcts and len(game) > 10:
             pose = MCTS(data_types, models, device, board, seq, len(game), min(len(game)+50 ,max(150, len(game) + 20)), 100)
         else:
             poses, _ = vote_next_move(data_types, models, device, board, seq)

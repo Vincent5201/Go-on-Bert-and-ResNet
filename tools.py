@@ -2,9 +2,6 @@ import numpy as np
 from tqdm import tqdm
 from config import *
 
-FIRST_STEPS = ["dd", "cd", "dc", "dp", "dq", "cp", "pd", "qd", 
-                   "pc", "pp", "pq", "qp","cc", "cq", "qc","qq"]
-
 def check(game, data_source, num_moves):
     
     if isinstance(game, np.ndarray):

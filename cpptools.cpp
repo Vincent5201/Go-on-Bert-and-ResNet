@@ -14,8 +14,6 @@ inline bool valid_pos(int x, int y) {
 
 bool value_board(py::array_t<int> board_in) {
     auto buf = board_in.request();
-    if (buf.ndim != 3 || buf.shape[0] != 4 || buf.shape[1] != BOARD_SIZE || buf.shape[2] != BOARD_SIZE)
-        throw runtime_error("Invalid board shape");
 
     int (*board2)[BOARD_SIZE][BOARD_SIZE] = new int[4][BOARD_SIZE][BOARD_SIZE];
     auto ptr = static_cast<int*>(buf.ptr);
@@ -102,7 +100,6 @@ bool value_board(py::array_t<int> board_in) {
 
 void channel_01(py::array_t<int> board, int x, int y, int turn) {
     auto b = board.mutable_unchecked<3>();
-
     set<pair<int, int>> live, died;
 
     function<bool(int, int, int)> checkDie = [&](int x, int y, int p) -> bool {
@@ -158,7 +155,6 @@ void channel_01(py::array_t<int> board, int x, int y, int turn) {
 void channel_3(py::array_t<int> board, int x, int y, int turn) {
 
     auto b = board.mutable_unchecked<3>();
-
     set<pair<int, int>> counted_empty;
     set<pair<int, int>> counted_pos;
 
@@ -190,7 +186,6 @@ void channel_3(py::array_t<int> board, int x, int y, int turn) {
         b(p, x, y) = 2;
         b(3, x, y) = min(6, liberty);
         vector<pair<int, int>> directions = {{x-1, y}, {x, y-1}, {x+1, y}, {x, y+1}};
-        
         for (auto [dx, dy] : directions) {
             if (valid_pos(dx, dy) && b(p, dx, dy) == 1) {
                 set_liberty(dx, dy, p, liberty);
@@ -202,7 +197,6 @@ void channel_3(py::array_t<int> board, int x, int y, int turn) {
     if (b(0, x, y) == 0 && b(1, x, y) == 0) {
         return;
     }
-
     set_liberty(x, y, turn % 2, check_liberty(x, y, turn % 2));
 
     int pp = (turn % 2 == 0) ? 1 : 0;

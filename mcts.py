@@ -115,9 +115,9 @@ class MCTSnode():
             return None
         maxucb = self.children[0].ucb
         maxidx = 0
-        for i in range(1, self.nch):
-            if self.children[i].ucb > maxucb:
-                maxucb = self.children[i].ucb
+        for i, child in enumerate(self.children):
+            if child.ucb > maxucb:
+                maxucb = child.ucb
                 maxidx = i
         return self.children[maxidx]
     
@@ -132,13 +132,12 @@ class MCTSnode():
         while move_count < num_moves:
             move_count += 1
             poses, _ = vote_next_move(data_types, models, device, board2, seq2)
-            pose = poses[0]
-            x, y = split_move(pose)
+            x, y = split_move(poses[0])
             
             channel_01(board2, x, y, move_count)
             channel_2(board2, move_count + 1)
             channel_3(board2, x, y, move_count)
-            seq2[move_count-1] = pose
+            seq2[move_count-1] = poses[0]
        
         bwin = value_board(board2)
 
@@ -176,8 +175,8 @@ def MCTS(data_types, models, device, board, seq, length, num_moves, iters):
 
     bwinrate = root.children[0].w / root.children[0].n
     idx = 0
-    for i in range(1, root.nch):
-        r = root.children[i].w / root.children[i].n
+    for i, child in enumerate(root.children):
+        r = child.w / child.n
         if length % 2:
             if r < bwinrate:
                 bwinrate = r
